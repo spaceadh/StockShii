@@ -3,9 +3,18 @@
 import os
 import re
 import sys
+import subprocess
+import pkg_resources
+
+
 import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
+import plotly.express as px  # Import Plotly inside the function to avoid unnecessary dependency if not used
+
+# List of required packages
+required_packages = ['yfinance', 'pandas', 'matplotlib', 'seaborn', 'plotly']	# Added plotly to the list of required packages
 
 # Define the cache directory
 CACHE_DIR = 'cache'
@@ -17,72 +26,127 @@ MARKETS = {
         "JNJ", "JPM", "BAC", "WMT",
         "DIS", "KO", "MCD", "PFE",
         "CAT", "BA", "MMM", "XOM",
-        "CVX", "GS", "MS", "INTC"
+        "CVX", "GS", "MS", "INTC",
+        "C", "UNH", "PG", "HD",
+        "V", "WFC", "MRK", "AXP",
+        "TMO", "NKE"
     ],
     "NASDAQ": [
         "AAPL", "MSFT", "GOOGL", "AMZN",
         "FB", "NFLX", "NVDA", "TSLA",
         "ADBE", "PYPL", "CMCSA", "INTC",
         "CSCO", "PEP", "QCOM", "AVGO",
-        "TXN", "AMD", "GILD", "AMGN"
+        "TXN", "AMD", "GILD", "AMGN",
+        "SBUX", "ZM", "FISV", "BKNG",
+        "ADP", "MDLZ", "MNST", "ATVI",
+        "LRCX", "ILMN"
     ],
     "London Stock Exchange": [
         "HSBA", "BP", "VOD", "GSK",
         "BARC", "AZN", "RIO", "ULVR",
-        "DGE", "BT.A", "ITRK", "RBS",
+        "DGE", "BT", "ITRK", "RBS",
         "BATS", "GLEN", "IMB", "LLOY",
-        "SBRY", "TSCO", "VED", "WPP"
+        "SBRY", "TSCO", "VED", "WPP",
+        "PRU", "BTI", "REL", "ANTO",
+        "AV.", "CRH", "GKN", "TT.",
+        "ADM", "EXPN"
     ],
     "Toronto Stock Exchange": [
         "RY", "TD", "BNS", "ENB",
         "BMO", "CM", "TRP", "SU",
         "SHOP", "MFC", "CNQ", "BCE",
-        "TD", "CNR", "FTS", "ABX",
-        "CVE", "SU", "IMO", "TEL"
+        "CNR", "FTS", "ABX", "CVE",
+        "IMO", "TEL", "BAM", "GIB",
+        "FTT", "PPL", "WPM", "NA",
+        "BAM.B", "SJR.B", "TRN"
     ],
     "Australian Securities Exchange": [
         "CBA", "BHP", "ANZ", "WBC",
         "NAB", "CSL", "WES", "MQG",
         "WOR", "TLS", "WOW", "RIO",
         "FMG", "SCG", "GMG", "SUN",
-        "TLS", "AMP", "COL", "SGP"
+        "AMP", "COL", "SGP", "APA",
+        "ORU", "VOD", "QBE", "NCM",
+        "SGR", "OZL", "BPT", "COH",
+        "IVC", "SYD"
     ],
     "Deutsche Börse Xetra": [
         "BMW", "SAP", "DTE", "BAS",
         "ALV", "VOW3", "SIE", "LIN",
         "BAYN", "DBK", "RWE", "BEI",
         "ADS", "FME", "CON", "HEI",
-        "MRK", "EOAN", "MTX", "TKA"
+        "MRK", "EOAN", "MTX", "TKA",
+        "PUM", "FRE", "LHA", "SY1",
+        "IFX", "VNA", "G1A", "DB1"
     ],
     "Tokyo Stock Exchange": [
         "7203", "6758", "9432", "9984",
         "8306", "6954", "8308", "8035",
         "8031", "6752", "9433", "6367",
         "6971", "4502", "7201", "6861",
-        "7751", "8038", "8591", "8304"
+        "7751", "8038", "8591", "8304",
+        "9983", "8036", "7752", "6762",
+        "8039", "4901", "7202", "5401",
+        "6501", "6981", "8034", "4503"
     ],
     "Hong Kong Stock Exchange": [
         "0700", "0941", "3690", "2388",
         "HKD1", "2318", "2382", "883",
         "388", "3694", "1928", "2628",
         "0005", "2319", "8163", "2313",
-        "1810", "2383", "366", "3691"
+        "1810", "2383", "366", "3691",
+        "2018", "2627", "2311", "2389",
+        "6886", "8306", "1988", "2312",
+        "3692", "6881", "2623", "2310"
     ],
     "Euronext Paris": [
         "AIR", "BNP", "ENGI", "OR",
         "GLE", "MC", "SAN", "VIE",
         "DSY", "AI", "ATO", "EL",
         "FTI", "RNO", "UG", "ACA",
-        "ACA", "DG", "KER", "MLE"
+        "DG", "KER", "MLE", "BN",
+        "ML", "RIO", "SU", "AIR",
+        "BNP", "ORA", "SAN", "GLE",
+        "MC", "DG", "ML"
     ],
     "Swiss Exchange": [
         "NESN", "NOVN", "ROG", "UBSG",
         "CSGN", "ZURN", "SREN", "ABB",
         "GLEN", "SCMN", "LONN", "ADEN",
         "SLHN", "SPSN", "SQN", "BAER",
-        "UHR", "SIKA", "TEMN", "LOGN"
+        "UHR", "SIKA", "TEMN", "LOGN",
+        "CFR", "UBS", "RHHBY", "NESN",
+        "NOVN", "ROG", "UBSG", "CSGN",
+        "ZURN", "SREN", "ABB", "GLEN"
     ]
 }
+
+
+def check_and_install(package):
+    try:
+        pkg_resources.get_distribution(package)
+    except pkg_resources.DistributionNotFound:
+        print(f"{package} is not installed. Installing...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+        print(f"{package} has been installed.")
+
+def install_pip_if_needed():
+    try:
+        import pip
+    except ImportError:
+        print("pip is not installed. Installing pip...")
+        subprocess.check_call([sys.executable, "-m", "ensurepip"])
+        print("pip has been installed.")
+
+def install_packages():
+    """Install required packages if not already installed."""
+    installed_packages = {pkg.key for pkg in pkg_resources.working_set}
+    missing_packages = set(required_packages) - installed_packages
+    if missing_packages:
+        print(f"Installing missing packages: {', '.join(missing_packages)}")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", *missing_packages])
+    else:
+        print("All required packages are already installed.")
 
 def list_markets():
     print("\nAvailable Markets:")
@@ -203,9 +267,127 @@ def plot_data(data, tickers, start_date, end_date):
     # Display the plot
     plt.show()
 
+def sns_plot_data(data, tickers, start_date, end_date):
+    sns.set(style="whitegrid")  # Set Seaborn style for better aesthetics
+    plt.figure(figsize=(14, 8))
+    
+    # Define color palette
+    palette = sns.color_palette("tab10", n_colors=len(tickers)*4)  # Enough colors for multiple lines
+    color_idx = 0  # Index to keep track of colors
+    
+    for ticker in tickers:
+        if ticker not in data:
+            print(f"Skipping {ticker} as no data was downloaded.")
+            continue
+        stock_data = data[ticker]
+        if stock_data.empty:
+            print(f"No data to plot for {ticker}.")
+            continue
+        
+        # Calculate Moving Averages
+        stock_data['MA20'] = stock_data['Close'].rolling(window=20).mean()
+        stock_data['MA50'] = stock_data['Close'].rolling(window=50).mean()
+        
+        # Melt the DataFrame for Seaborn
+        plot_df = stock_data[['Open', 'Close', 'MA20', 'MA50']].reset_index().melt(id_vars='Date', var_name='Metric', value_name='Price')
+        plot_df['Ticker'] = ticker  # Add ticker for hue
+        
+        # Plot each metric with different styles
+        sns.lineplot(data=plot_df, x='Date', y='Price', hue='Metric', style='Metric',
+                     markers=False, dashes=False, linewidth=1.5, palette=[palette[color_idx], palette[color_idx+1], palette[color_idx+2], palette[color_idx+3]])
+        
+        color_idx += 4  # Increment color index for next ticker
+    
+    plt.title('Stock Opening & Closing Prices with Moving Averages', fontsize=16)
+    plt.xlabel('Date', fontsize=14)
+    plt.ylabel('Price ($)', fontsize=14)
+    plt.legend(title='Metric', fontsize=10, title_fontsize=12)
+    plt.tight_layout()
+    
+    # Save the plot as an image
+    # Create a safe filename by replacing special characters
+    safe_tickers = "_".join(tickers).replace("/", "_")
+    filename = f"stock_plot_{safe_tickers}_{start_date}_to_{end_date}.png"
+    plt.savefig(filename)
+    print(f"\nPlot saved as {filename}")
+    
+    # Display the plot
+    plt.show()
+
+def plot_data_facets(data, tickers, start_date, end_date):
+    sns.set(style="whitegrid")
+    
+    # Create a combined DataFrame
+    combined_df = pd.DataFrame()
+    for ticker in tickers:
+        if ticker not in data or data[ticker].empty:
+            print(f"Skipping {ticker} as no data was downloaded or data is empty.")
+            continue
+        stock_data = data[ticker].copy()
+        stock_data.reset_index(inplace=True)
+        stock_data['Ticker'] = ticker
+        stock_data['MA20'] = stock_data['Close'].rolling(window=20).mean()
+        stock_data['MA50'] = stock_data['Close'].rolling(window=50).mean()
+        combined_df = pd.concat([combined_df, stock_data], ignore_index=True)
+    
+    # Melt the DataFrame for Seaborn
+    melted_df = combined_df.melt(id_vars=['Date', 'Ticker'], value_vars=['Open', 'Close', 'MA20', 'MA50'],
+                                 var_name='Metric', value_name='Price')
+    
+    # Create a FacetGrid
+    g = sns.FacetGrid(melted_df, col="Ticker", hue="Metric", height=5, aspect=1.5, palette="tab10")
+    g.map(sns.lineplot, "Date", "Price")
+    g.add_legend()
+    
+    plt.subplots_adjust(top=0.9)
+    g.fig.suptitle('Stock Opening & Closing Prices with Moving Averages')
+    
+    # Save the plot
+    safe_tickers = "_".join(tickers).replace("/", "_")
+    filename = f"stock_plot_facets_{safe_tickers}_{start_date}_to_{end_date}.png"
+    plt.savefig(filename)
+    print(f"\nFacet plot saved as {filename}")
+    
+    plt.show()
+
+def plot_data_interactive(data, tickers, start_date, end_date):
+    combined_df = pd.DataFrame()
+    for ticker in tickers:
+        if ticker not in data or data[ticker].empty:
+            print(f"Skipping {ticker} as no data was downloaded or data is empty.")
+            continue
+        stock_data = data[ticker].copy()
+        stock_data.reset_index(inplace=True)
+        stock_data['Ticker'] = ticker
+        stock_data['MA20'] = stock_data['Close'].rolling(window=20).mean()
+        stock_data['MA50'] = stock_data['Close'].rolling(window=50).mean()
+        combined_df = pd.concat([combined_df, stock_data], ignore_index=True)
+    
+    # Melt the DataFrame for Plotly
+    melted_df = combined_df.melt(id_vars=['Date', 'Ticker'], value_vars=['Open', 'Close', 'MA20', 'MA50'],
+                                 var_name='Metric', value_name='Price')
+    
+    fig = px.line(melted_df, x='Date', y='Price', color='Metric', line_dash='Metric',
+                  facet_col='Ticker', title='Stock Opening & Closing Prices with Moving Averages',
+                  labels={'Price': 'Price ($)', 'Date': 'Date'}, hover_data=['Ticker'])
+    
+    fig.update_layout(legend_title_text='Metric', height=600)
+    
+    # Save the plot
+    safe_tickers = "_".join(tickers).replace("/", "_")
+    filename = f"stock_plot_interactive_{safe_tickers}_{start_date}_to_{end_date}.html"
+    fig.write_html(filename)
+    print(f"\nInteractive plot saved as {filename}")
+    
+    fig.show()
+
 def main():
     print("=== Stock Data Analyzer ===")
-    
+
+    # Install packages
+    install_packages()
+    print("All required packages have been checked and installed.")
+
     # Step 1: List and select market
     list_markets()
     market = get_market_choice()
@@ -244,8 +426,31 @@ def main():
             filtered_length = len(data[ticker])
             print(f"\nFiltered data for {ticker}: {filtered_length} records remaining (dropped {original_length - filtered_length}).")
     
+    print('Kindly enter choice of plot: \n1. Plot Data \n2. Seaborn Plot Data \n3. Plot Data Facets \n4. Plot Data Interactive')
+
+    choice = int(input())
+    
+    # Call the appropriate function based on the user's choice
+    if choice == 1:
+        plot_data(data, selected_tickers, start_date, end_date)
+    elif choice == 2:
+        sns_plot_data(data, selected_tickers, start_date, end_date)
+    elif choice == 3:
+        plot_data_facets(data, selected_tickers, start_date, end_date)
+    elif choice == 4:
+        plot_data_interactive(data, selected_tickers, start_date, end_date)
+    else:
+        print("Invalid choice. Seems like we`ll go with the default plot, MatplotLib.")
+        plot_data(data, selected_tickers, start_date, end_date)
     # Step 6: Plot data
-    plot_data(data, selected_tickers, start_date, end_date)
+    
+
+    # sns_plot_data(data, selected_tickers, start_date, end_date)
+    # Optional: Plot Facets
+    # plot_data_facets(data, selected_tickers, start_date, end_date)
+    
+    # Optional: Interactive Plot using Plotly
+    # plot_data_interactive(data, selected_tickers, start_date, end_date)
 
 if __name__ == "__main__":
     main()
