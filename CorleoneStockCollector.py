@@ -6,13 +6,6 @@ import sys
 import subprocess
 import pkg_resources
 
-
-import yfinance as yf
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import plotly.express as px  # Import Plotly inside the function to avoid unnecessary dependency if not used
-
 # List of required packages
 required_packages = ['yfinance', 'pandas', 'matplotlib', 'seaborn', 'plotly']	# Added plotly to the list of required packages
 
@@ -197,6 +190,12 @@ def get_date(prompt):
             print("Invalid date format. Please enter the date in YYYY-MM-DD format.")
 
 def download_and_cache_data(tickers, start_date, end_date):
+    import yfinance as yf
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import plotly.express as px  # Import Plotly inside the function to avoid unnecessary dependency if not used
+
     if not os.path.exists(CACHE_DIR):
         os.makedirs(CACHE_DIR)
     
@@ -225,6 +224,8 @@ def download_and_cache_data(tickers, start_date, end_date):
     return data
 
 def plot_data(data, tickers, start_date, end_date):
+    import matplotlib.pyplot as plt
+
     plt.figure(figsize=(14, 8))
     
     for ticker in tickers:
@@ -268,6 +269,11 @@ def plot_data(data, tickers, start_date, end_date):
     plt.show()
 
 def sns_plot_data(data, tickers, start_date, end_date):
+    import yfinance as yf
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
     sns.set(style="whitegrid")  # Set Seaborn style for better aesthetics
     plt.figure(figsize=(14, 8))
     
@@ -315,6 +321,12 @@ def sns_plot_data(data, tickers, start_date, end_date):
     plt.show()
 
 def plot_data_facets(data, tickers, start_date, end_date):
+    # import yfinance as yf
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    # import plotly.express as px  # Import Plotly inside the function to avoid unnecessary dependency if not used
+
     sns.set(style="whitegrid")
     
     # Create a combined DataFrame
@@ -347,10 +359,15 @@ def plot_data_facets(data, tickers, start_date, end_date):
     filename = f"stock_plot_facets_{safe_tickers}_{start_date}_to_{end_date}.png"
     plt.savefig(filename)
     print(f"\nFacet plot saved as {filename}")
-    
     plt.show()
 
 def plot_data_interactive(data, tickers, start_date, end_date):
+    # import yfinance as yf
+    import pandas as pd
+    # import matplotlib.pyplot as plt
+    # import seaborn as sns
+    import plotly.express as px  # Import Plotly inside the function to avoid unnecessary dependency if not used
+
     combined_df = pd.DataFrame()
     for ticker in tickers:
         if ticker not in data or data[ticker].empty:
